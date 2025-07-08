@@ -8,14 +8,14 @@ export default function Register({ navigation }) {
   const [password, setPassword] = useState('');
 
   const handleRegister = async () => {
-    console.log('Register attempt with:', { email, password });
+    //console.log('Register attempt with:', { email, password });
     try {
       const response = await axios.post(`${IP_ADDRESS}/api/auth/register`, { email, password });
-      console.log('Register success:', response.data);
+      //console.log('Register success:', response.data);
       Alert.alert('Success', 'Registration successful! Please login.');
       navigation.navigate('Login');
     } catch (error) {
-      console.error('Register error:', error.response?.data, error.message);
+      //console.error('Register error:', error.response?.data, error.message);
       Alert.alert('Error', error.response?.data?.message || 'Registration failed');
     }
   };

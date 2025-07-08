@@ -27,7 +27,7 @@ export default function Home({ navigation }) {
       });
       setTodos(response.data);
     } catch (error) {
-      console.error('Fetch todos error:', error.message);
+      //console.error('Fetch todos error:', error.message);
       Alert.alert('Error', 'Failed to fetch todos');
     }
   };
@@ -46,7 +46,7 @@ export default function Home({ navigation }) {
       setDueDate('');
       setShowAddForm(false);
     } catch (error) {
-      console.error('Add todo error:', error.message);
+      //console.error('Add todo error:', error.message);
       Alert.alert('Error', 'Failed to add todo');
     }
   };
@@ -67,7 +67,7 @@ export default function Home({ navigation }) {
         setSelectedTodo(response.data);
       }
     } catch (error) {
-      console.error('Toggle todo error:', error.message);
+      //console.error('Toggle todo error:', error.message);
       Alert.alert('Error', 'Failed to toggle todo');
     }
   };
@@ -88,7 +88,7 @@ export default function Home({ navigation }) {
       setEditTitle('');
       setEditDueDate('');
     } catch (error) {
-      console.error('Update todo error:', error.message);
+      //console.error('Update todo error:', error.message);
       Alert.alert('Error', 'Failed to update todo');
     }
   };
@@ -153,13 +153,13 @@ export default function Home({ navigation }) {
       });
       setTodos(todos.filter((todo) => todo.id !== id));
     } catch (error) {
-      console.error('Delete todo error:', error.message);
+      //console.error('Delete todo error:', error.message);
       Alert.alert('Error', 'Failed to delete todo');
     }
   };
 
   const openMenu = () => {
-    console.log('Menu button clicked, opening sidebar');
+    //console.log('Menu button clicked, opening sidebar');
     navigation.openDrawer();
   };
 
