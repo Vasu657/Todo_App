@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, FlatList, Alert, StyleSheet, Modal, ScrollView } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, FlatList, Alert, StyleSheet, Modal, ScrollView, Platform } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import axios from 'axios';
 import { IP_ADDRESS } from '../ip';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -14,6 +15,12 @@ export default function Home({ navigation }) {
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState('');
   const [editDueDate, setEditDueDate] = useState('');
+  
+  // Date picker states
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showEditDatePicker, setShowEditDatePicker] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [editSelectedDate, setEditSelectedDate] = useState(new Date());
 
   useEffect(() => {
     fetchTodos();
@@ -104,18 +111,25 @@ export default function Home({ navigation }) {
     setIsEditing(false);
     setEditTitle('');
     setEditDueDate('');
+    setEditSelectedDate(new Date());
   };
 
   const startEditing = () => {
     setIsEditing(true);
     setEditTitle(selectedTodo.title);
     setEditDueDate(selectedTodo.due_date || '');
+    if (selectedTodo.due_date) {
+      setEditSelectedDate(new Date(selectedTodo.due_date));
+    } else {
+      setEditSelectedDate(new Date());
+    }
   };
 
   const cancelEditing = () => {
     setIsEditing(false);
     setEditTitle('');
     setEditDueDate('');
+    setEditSelectedDate(new Date());
   };
 
   const saveEdit = () => {
@@ -143,6 +157,55 @@ export default function Home({ navigation }) {
       hour: '2-digit',
       minute: '2-digit'
     });
+  };
+
+  // Date picker handlers
+  const onDateChange = (event, selectedDate) => {
+    const currentDate = selectedDate || new Date();
+    setShowDatePicker(Platform.OS === 'ios');
+    setSelectedDate(currentDate);
+    
+    if (event.type === 'set') {
+      const formattedDate = currentDate.toISOString().split('T')[0];
+      setDueDate(formattedDate);
+    }
+  };
+
+  const onEditDateChange = (event, selectedDate) => {
+    const currentDate = selectedDate || new Date();
+    setShowEditDatePicker(Platform.OS === 'ios');
+    setEditSelectedDate(currentDate);
+    
+    if (event.type === 'set') {
+      const formattedDate = currentDate.toISOString().split('T')[0];
+      setEditDueDate(formattedDate);
+    }
+  };
+
+  const showDatePickerModal = () => {
+    if (dueDate) {
+      setSelectedDate(new Date(dueDate));
+    }
+    setShowDatePicker(true);
+  };
+
+  const showEditDatePickerModal = () => {
+    if (editDueDate) {
+      setEditSelectedDate(new Date(editDueDate));
+    } else {
+      setEditSelectedDate(new Date());
+    }
+    setShowEditDatePicker(true);
+  };
+
+  const clearDueDate = () => {
+    setDueDate('');
+    setSelectedDate(new Date());
+  };
+
+  const clearEditDueDate = () => {
+    setEditDueDate('');
+    setEditSelectedDate(new Date());
   };
 
   const deleteTodo = async (id) => {
@@ -191,13 +254,29 @@ export default function Home({ navigation }) {
               onChangeText={setTitle}
               placeholderTextColor="#888"
             />
-            <TextInput
-              style={styles.input}
-              placeholder="Due date (YYYY-MM-DD)"
-              value={dueDate}
-              onChangeText={setDueDate}
-              placeholderTextColor="#888"
-            />
+            
+            <View style={styles.datePickerContainer}>
+              <Text style={styles.dateLabel}>Due Date</Text>
+              <View style={styles.dateButtonRow}>
+                <TouchableOpacity 
+                  style={styles.datePickerButton} 
+                  onPress={showDatePickerModal}
+                >
+                  <Text style={styles.datePickerButtonText}>
+                    {dueDate ? formatDate(dueDate) : '📅 Select Date'}
+                  </Text>
+                </TouchableOpacity>
+                {dueDate && (
+                  <TouchableOpacity 
+                    style={styles.clearDateButton} 
+                    onPress={clearDueDate}
+                  >
+                    <Text style={styles.clearDateButtonText}>✕</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            </View>
+            
             <View style={styles.formButtons}>
               <TouchableOpacity style={styles.saveButton} onPress={addTodo}>
                 <Text style={styles.buttonText}>Save</Text>
@@ -208,6 +287,7 @@ export default function Home({ navigation }) {
                   setShowAddForm(false);
                   setTitle('');
                   setDueDate('');
+                  setSelectedDate(new Date());
                 }}
               >
                 <Text style={styles.cancelButtonText}>Cancel</Text>
@@ -340,13 +420,26 @@ export default function Home({ navigation }) {
                 <View style={styles.detailSection}>
                   <Text style={styles.detailLabel}>Due Date</Text>
                   {isEditing ? (
-                    <TextInput
-                      style={styles.editInput}
-                      value={editDueDate}
-                      onChangeText={setEditDueDate}
-                      placeholder="Due date (YYYY-MM-DD)"
-                      placeholderTextColor="#888"
-                    />
+                    <View style={styles.editDatePickerContainer}>
+                      <View style={styles.dateButtonRow}>
+                        <TouchableOpacity 
+                          style={styles.editDatePickerButton} 
+                          onPress={showEditDatePickerModal}
+                        >
+                          <Text style={styles.editDatePickerButtonText}>
+                            {editDueDate ? formatDate(editDueDate) : '📅 Select Date'}
+                          </Text>
+                        </TouchableOpacity>
+                        {editDueDate && (
+                          <TouchableOpacity 
+                            style={styles.clearEditDateButton} 
+                            onPress={clearEditDueDate}
+                          >
+                            <Text style={styles.clearEditDateButtonText}>✕</Text>
+                          </TouchableOpacity>
+                        )}
+                      </View>
+                    </View>
                   ) : (
                     <View style={styles.detailValueContainer}>
                       <Text style={[styles.detailValue, styles.dueDateValue]}>
@@ -402,6 +495,27 @@ export default function Home({ navigation }) {
           </View>
         </View>
       </Modal>
+
+      {/* Date Pickers */}
+      {showDatePicker && (
+        <DateTimePicker
+          value={selectedDate}
+          mode="date"
+          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+          onChange={onDateChange}
+          minimumDate={new Date()}
+        />
+      )}
+
+      {showEditDatePicker && (
+        <DateTimePicker
+          value={editSelectedDate}
+          mode="date"
+          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+          onChange={onEditDateChange}
+          minimumDate={new Date()}
+        />
+      )}
     </View>
   );
 }
@@ -802,6 +916,83 @@ const styles = StyleSheet.create({
   cancelEditButtonText: {
     color: '#6b7280',
     fontSize: 16,
+    fontWeight: '600',
+  },
+  // Date Picker Styles
+  datePickerContainer: {
+    marginBottom: 12,
+  },
+  dateLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#374151',
+    marginBottom: 8,
+  },
+  dateButtonRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  datePickerButton: {
+    backgroundColor: '#f8fafc',
+    borderRadius: 8,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    flex: 1,
+    marginRight: 8,
+  },
+  datePickerButtonText: {
+    fontSize: 16,
+    color: '#1f2937',
+    textAlign: 'center',
+  },
+  clearDateButton: {
+    backgroundColor: '#fee2e2',
+    borderRadius: 8,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#fecaca',
+    width: 44,
+    height: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  clearDateButtonText: {
+    fontSize: 16,
+    color: '#dc2626',
+    fontWeight: '600',
+  },
+  editDatePickerContainer: {
+    marginBottom: 8,
+  },
+  editDatePickerButton: {
+    backgroundColor: '#f8fafc',
+    borderRadius: 8,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    flex: 1,
+    marginRight: 8,
+  },
+  editDatePickerButtonText: {
+    fontSize: 16,
+    color: '#1f2937',
+    textAlign: 'center',
+  },
+  clearEditDateButton: {
+    backgroundColor: '#fee2e2',
+    borderRadius: 8,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#fecaca',
+    width: 44,
+    height: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  clearEditDateButtonText: {
+    fontSize: 16,
+    color: '#dc2626',
     fontWeight: '600',
   },
 });
