@@ -8,6 +8,9 @@ import Home from './screens/Home';
 import Login from './screens/Login';
 import Register from './screens/Register';
 import Profile from './screens/Profile';
+import About from './screens/About';
+import Help from './screens/Help';
+import Settings from './screens/Settings';
 import Sidebar from './screens/Sidebar';
 
 const Drawer = createDrawerNavigator();
@@ -161,6 +164,9 @@ const MainDrawer = () => {
     >
       <Drawer.Screen name="Home" component={Home} />
       <Drawer.Screen name="Profile" component={Profile} />
+      <Drawer.Screen name="Settings" component={Settings} />
+      <Drawer.Screen name="Help" component={Help} />
+      <Drawer.Screen name="About" component={About} />
     </Drawer.Navigator>
   );
 };

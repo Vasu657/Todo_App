@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, FlatList, Alert, StyleSheet, Modal, ScrollView, Platform, BackHandler } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, FlatList, Alert, StyleSheet, Modal, ScrollView, Platform, BackHandler, Image } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import axios from 'axios';
 import { IP_ADDRESS } from '../ip';
@@ -27,9 +27,16 @@ export default function Home({ navigation }) {
   // Selection mode states
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedTodos, setSelectedTodos] = useState([]);
+  
+  // Auto-sliding welcome card state
+  const [currentSlide, setCurrentSlide] = useState(0);
+  
+  // User profile state
+  const [profileData, setProfileData] = useState(null);
 
   useEffect(() => {
     fetchTodos();
+    fetchProfile();
     updateCurrentRoute('Home'); // Update current route when Home mounts
   }, []);
 
@@ -37,6 +44,7 @@ export default function Home({ navigation }) {
   useEffect(() => {
     if (refreshTrigger > 0) {
       fetchTodos();
+      fetchProfile();
     }
   }, [refreshTrigger]);
 
@@ -62,6 +70,16 @@ export default function Home({ navigation }) {
     return () => backHandler.remove();
   }, [isSelectionMode]);
 
+  // Auto-sliding effect for welcome card
+  useEffect(() => {
+    if (!isSelectionMode) {
+      const interval = setInterval(() => {
+        setCurrentSlide((prevSlide) => (prevSlide + 1) % 3);
+      }, 3000);
+      return () => clearInterval(interval);
+    }
+  }, [isSelectionMode]);
+
   const fetchTodos = async () => {
     try {
       const token = await AsyncStorage.getItem('token');
@@ -72,6 +90,22 @@ export default function Home({ navigation }) {
     } catch (error) {
       //console.error('Fetch todos error:', error.message);
       Alert.alert('Error', 'Failed to fetch todos');
+    }
+  };
+  
+  const fetchProfile = async () => {
+    try {
+      const token = await AsyncStorage.getItem('token');
+      if (!token) return;
+      
+      const response = await axios.get(`${IP_ADDRESS}/api/profile`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      
+      setProfileData(response.data);
+    } catch (error) {
+      // Silent fail for profile fetch
+      console.error('Fetch profile error:', error.message);
     }
   };
 
@@ -342,6 +376,24 @@ export default function Home({ navigation }) {
           <Text style={styles.menuIcon}>☰</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Todo App</Text>
+        <TouchableOpacity 
+          style={styles.profileButton}
+          onPress={() => navigation.navigate('Profile')}
+        >
+          {profileData && profileData.profilePhoto ? (
+            <Image 
+              source={{ uri: profileData.profilePhoto }} 
+              style={styles.profilePhoto} 
+              onError={() => console.log('Error loading profile image')}
+            />
+          ) : (
+            <View style={styles.defaultPhoto}>
+              <Text style={styles.defaultPhotoText}>
+                {profileData && profileData.name ? profileData.name.charAt(0).toUpperCase() : 'U'}
+              </Text>
+            </View>
+          )}
+        </TouchableOpacity>
       </View>
       <View style={styles.content}>
         {isSelectionMode ? (
@@ -375,14 +427,46 @@ export default function Home({ navigation }) {
             </View>
           </View>
         ) : (
-          <View style={styles.demoCard}>
-            <View style={styles.demoCardContent}>
-              <Text style={styles.demoTitle}>Welcome to Todo App</Text>
-              <Text style={styles.demoSubtitle}>Organize your tasks efficiently</Text>
-              <View style={styles.demoFeatures}>
-                <Text style={styles.demoFeature}>• Long press to select multiple todos</Text>
-                <Text style={styles.demoFeature}>• Mark tasks as complete</Text>
-              </View>
+          <View style={styles.welcomeCard}>
+            <View style={styles.slideContainer}>
+              {currentSlide === 0 && (
+                <View style={styles.slide}>
+                  <View style={styles.slideIcon}>
+                    <Text style={styles.slideIconText}>✨</Text>
+                  </View>
+                  <Text style={styles.slideTitle}>Welcome to Todo App</Text>
+                  <Text style={styles.slideSubtitle}>Organize your life with ease</Text>
+                </View>
+              )}
+              {currentSlide === 1 && (
+                <View style={styles.slide}>
+                  <View style={styles.slideIcon}>
+                    <Text style={styles.slideIconText}>🎯</Text>
+                  </View>
+                  <Text style={styles.slideTitle}>Stay Productive</Text>
+                  <Text style={styles.slideSubtitle}>Track tasks & set due dates</Text>
+                </View>
+              )}
+              {currentSlide === 2 && (
+                <View style={styles.slide}>
+                  <View style={styles.slideIcon}>
+                    <Text style={styles.slideIconText}>⚡</Text>
+                  </View>
+                  <Text style={styles.slideTitle}>Quick Actions</Text>
+                  <Text style={styles.slideSubtitle}>Long press to select multiple</Text>
+                </View>
+              )}
+            </View>
+            <View style={styles.slideIndicators}>
+              {[0, 1, 2].map((index) => (
+                <View
+                  key={index}
+                  style={[
+                    styles.indicator,
+                    currentSlide === index && styles.activeIndicator,
+                  ]}
+                />
+              ))}
             </View>
           </View>
         )}
@@ -738,6 +822,32 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#ffffff',
     marginLeft: 16,
+    flex: 1,
+  },
+  profileButton: {
+    marginLeft: 'auto',
+  },
+  profilePhoto: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 2,
+    borderColor: '#ffffff',
+  },
+  defaultPhoto: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#1e40af',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#ffffff',
+  },
+  defaultPhotoText: {
+    color: '#ffffff',
+    fontSize: 18,
+    fontWeight: 'bold',
   },
   content: {
     flex: 1,
@@ -745,41 +855,79 @@ const styles = StyleSheet.create({
     paddingTop: 20,
     paddingBottom: 16,
   },
-  // Demo Card Styles
-  demoCard: {
+  // Welcome Card Styles
+  welcomeCard: {
     backgroundColor: '#ffffff',
-    padding: 20,
     marginBottom: 16,
-    borderLeftWidth: 4,
-    borderLeftColor: '#2563eb',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: '#2563eb',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 6,
+    borderWidth: 1,
+    borderColor: '#e0e7ff',
   },
-  demoCardContent: {
-    alignItems: 'flex-start',
+  slideContainer: {
+    minHeight: 80,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  demoTitle: {
-    fontSize: 20,
-    fontWeight: '600',
+  slide: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+  },
+  slideIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#eff6ff',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
+    shadowColor: '#2563eb',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  slideIconText: {
+    fontSize: 24,
+  },
+  slideTitle: {
+    fontSize: 18,
+    fontWeight: '700',
     color: '#111827',
     marginBottom: 4,
+    textAlign: 'center',
   },
-  demoSubtitle: {
-    fontSize: 14,
-    color: '#6b7280',
-    marginBottom: 16,
-  },
-  demoFeatures: {
-    alignSelf: 'stretch',
-  },
-  demoFeature: {
+  slideSubtitle: {
     fontSize: 13,
-    color: '#374151',
-    marginBottom: 4,
-    lineHeight: 18,
+    color: '#6b7280',
+    textAlign: 'center',
+    fontWeight: '500',
+  },
+  slideIndicators: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 16,
+    gap: 8,
+  },
+  indicator: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#d1d5db',
+    opacity: 0.6,
+  },
+  activeIndicator: {
+    backgroundColor: '#2563eb',
+    opacity: 1,
+    width: 20,
+    borderRadius: 3,
   },
   // Selection Container
   selectionContainer: {

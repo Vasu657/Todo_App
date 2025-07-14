@@ -410,18 +410,8 @@ export default function Profile({ navigation }) {
     >
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => {
-           // console.log('Back button pressed');
-            if (isEditing) {
-              handleCancelEdit();
-            } else {
-              navigation.navigate('Home');
-            }
-          }}
-        >
-          <Text style={styles.backButtonText}>←</Text>
+        <TouchableOpacity onPress={() => navigation.openDrawer()} style={styles.menuButton}>
+          <Text style={styles.menuIcon}>☰</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{isEditing ? 'Edit Profile' : 'Profile'}</Text>
         {isEditing ? (
@@ -686,7 +676,7 @@ export default function Profile({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#f1f5f9',
   },
   loadingContainer: {
     flex: 1,
@@ -726,33 +716,30 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   header: {
+    backgroundColor: '#2563eb',
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: 50,
-    paddingBottom: 20,
-    backgroundColor: '#ffffff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
+    padding: 16,
+    paddingTop: 40,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 5,
   },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#f3f4f6',
-    justifyContent: 'center',
-    alignItems: 'center',
+  menuButton: {
+    padding: 8,
   },
-  backButtonText: {
-    fontSize: 20,
-    color: '#374151',
-    fontWeight: '600',
+  menuIcon: {
+    fontSize: 24,
+    color: '#ffffff',
   },
   headerTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#111827',
+    color: '#ffffff',
+    marginLeft: 16,
+    flex: 1,
   },
   editButton: {
     paddingHorizontal: 16,

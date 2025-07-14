@@ -55,10 +55,14 @@ export default function Sidebar({ navigation, state }) {
     const routeToIndex = {
       'Home': 0,
       'Profile': 2, // Profile is now at index 2 after removing completed
+      'Settings': 3, // Settings is at index 3 in the menuItems array
+      'Help': 4,    // Help is at index 4 in the menuItems array
+      'About': 5,   // About is at index 5 in the menuItems array
     };
     
     const newActiveIndex = routeToIndex[currentRoute] !== undefined ? routeToIndex[currentRoute] : 0;
     setActiveItem(newActiveIndex);
+    console.log('Current route:', currentRoute, 'Active index:', newActiveIndex);
   }, [currentRoute]);
 
   // Also update based on navigation state as fallback
@@ -70,6 +74,9 @@ export default function Sidebar({ navigation, state }) {
       const routeToIndex = {
         'Home': 0,
         'Profile': 2,
+        'Settings': 3,
+        'Help': 4,
+        'About': 5,
       };
       
       const newActiveIndex = routeToIndex[routeName] !== undefined ? routeToIndex[routeName] : 0;
@@ -128,7 +135,7 @@ export default function Sidebar({ navigation, state }) {
       title: 'Settings',
       icon: '⚙️',
       onPress: () => {
-        Alert.alert('Coming Soon', 'Settings page will be available soon!');
+        navigation.navigate('Settings');
       }
     },
     {
@@ -136,7 +143,7 @@ export default function Sidebar({ navigation, state }) {
       title: 'Help & Support',
       icon: '❓',
       onPress: () => {
-        Alert.alert('Help & Support', 'For support, please contact us at support@todoapp.com');
+        navigation.navigate('Help');
       }
     },
     {
@@ -144,7 +151,7 @@ export default function Sidebar({ navigation, state }) {
       title: 'About',
       icon: 'ℹ️',
       onPress: () => {
-        Alert.alert('About Todo App', 'Version 1.0\nBuilt with React Native\n\nA simple and efficient task management app to help you stay organized and productive.');
+        navigation.navigate('About');
       }
     }
   ];
