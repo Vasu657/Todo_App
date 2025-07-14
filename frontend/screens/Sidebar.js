@@ -1,13 +1,83 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Alert, Animated, Dimensions } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, Alert, Animated, Dimensions, Image } from 'react-native';
+import { useAppContext } from '../App';
+import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { IP_ADDRESS } from '../ip';
 
 const { width } = Dimensions.get('window');
 
 export default function Sidebar({ navigation, state }) {
-  const [activeItem, setActiveItem] = useState(state?.index || 0);
+  const { handleLogout, currentRoute, refreshTrigger } = useAppContext();
+  const [activeItem, setActiveItem] = useState(0);
+  const [userProfile, setUserProfile] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  const handleLogout = async () => {
+  // Fetch user profile data
+  const fetchUserProfile = async () => {
+    try {
+      const token = await AsyncStorage.getItem('token');
+      if (!token) return;
+
+      const response = await fetch(`${IP_ADDRESS}/api/profile`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setUserProfile(data);
+      }
+    } catch (error) {
+      console.error('Error fetching user profile in sidebar:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Initial profile fetch
+  useEffect(() => {
+    fetchUserProfile();
+  }, []);
+
+  // Refresh profile when refreshTrigger changes
+  useEffect(() => {
+    if (refreshTrigger > 0) {
+      fetchUserProfile();
+    }
+  }, [refreshTrigger]);
+
+  // Update active item based on current route from global state
+  useEffect(() => {
+    const routeToIndex = {
+      'Home': 0,
+      'Profile': 2, // Profile is now at index 2 after removing completed
+    };
+    
+    const newActiveIndex = routeToIndex[currentRoute] !== undefined ? routeToIndex[currentRoute] : 0;
+    setActiveItem(newActiveIndex);
+  }, [currentRoute]);
+
+  // Also update based on navigation state as fallback
+  useEffect(() => {
+    if (state && state.routes && state.index !== undefined) {
+      const currentRouteFromState = state.routes[state.index];
+      const routeName = currentRouteFromState.name;
+      
+      const routeToIndex = {
+        'Home': 0,
+        'Profile': 2,
+      };
+      
+      const newActiveIndex = routeToIndex[routeName] !== undefined ? routeToIndex[routeName] : 0;
+      setActiveItem(newActiveIndex);
+    }
+  }, [state]);
+
+  const handleLogoutPress = async () => {
     Alert.alert(
       'Logout',
       'Are you sure you want to logout?',
@@ -20,8 +90,8 @@ export default function Sidebar({ navigation, state }) {
           text: 'Logout',
           style: 'destructive',
           onPress: async () => {
-            await AsyncStorage.removeItem('token');
-            navigation.navigate('Login');
+            await handleLogout();
+            // Navigation will be handled automatically by the context
           },
         },
       ],
@@ -34,7 +104,6 @@ export default function Sidebar({ navigation, state }) {
       title: 'Home',
       icon: '🏠',
       onPress: () => {
-        setActiveItem(0);
         navigation.navigate('Home');
       }
     },
@@ -47,19 +116,11 @@ export default function Sidebar({ navigation, state }) {
       }
     },
     {
-      id: 'completed',
-      title: 'Completed',
-      icon: '✅',
-      onPress: () => {
-        Alert.alert('Coming Soon', 'Completed todos view will be available soon!');
-      }
-    },
-    {
       id: 'profile',
       title: 'Profile',
       icon: '👤',
       onPress: () => {
-        Alert.alert('Coming Soon', 'Profile page will be available soon!');
+        navigation.navigate('Profile');
       }
     },
     {
@@ -71,20 +132,72 @@ export default function Sidebar({ navigation, state }) {
       }
     },
     {
+      id: 'help',
+      title: 'Help & Support',
+      icon: '❓',
+      onPress: () => {
+        Alert.alert('Help & Support', 'For support, please contact us at support@todoapp.com');
+      }
+    },
+    {
       id: 'about',
       title: 'About',
       icon: 'ℹ️',
       onPress: () => {
-        Alert.alert('About', 'Todo App v1.0\nBuilt with React Native');
+        Alert.alert('About Todo App', 'Version 1.0\nBuilt with React Native\n\nA simple and efficient task management app to help you stay organized and productive.');
       }
     }
   ];
 
   return (
     <View style={styles.container}>
+      {/* Enhanced Header with User Profile */}
       <View style={styles.header}>
-        <Text style={styles.title}>Todo App</Text>
-        <Text style={styles.subtitle}>Organize your tasks</Text>
+        <View style={styles.appInfo}>
+          <Text style={styles.appName}>Todo App</Text>
+          <Text style={styles.appVersion}>v1.0</Text>
+        </View>
+        
+        {/* User Profile Section */}
+        <View style={styles.userSection}>
+          <TouchableOpacity 
+            style={styles.userProfileContainer}
+            onPress={() => navigation.navigate('Profile')}
+          >
+            <View style={styles.profileImageContainer}>
+              {userProfile?.profilePhoto ? (
+                <Image
+                  source={{ uri: userProfile.profilePhoto }}
+                  style={styles.profileImage}
+                  onError={(error) => {
+                    console.log('Profile photo load error in sidebar:', error);
+                  }}
+                />
+              ) : (
+                <View style={styles.defaultProfileImage}>
+                  <Text style={styles.defaultProfileText}>
+                    {userProfile?.name ? userProfile.name.charAt(0).toUpperCase() : 'U'}
+                  </Text>
+                </View>
+              )}
+              <View style={styles.onlineIndicator} />
+            </View>
+            
+            <View style={styles.userInfo}>
+              <Text style={styles.userName} numberOfLines={1}>
+                {loading ? 'Loading...' : (userProfile?.name || 'User')}
+              </Text>
+              <Text style={styles.userEmail} numberOfLines={1}>
+                {loading ? 'Please wait...' : (userProfile?.email || 'user@example.com')}
+              </Text>
+              {userProfile?.id && (
+                <Text style={styles.userId}>
+                  ID: #{userProfile.id}
+                </Text>
+              )}
+            </View>
+          </TouchableOpacity>
+        </View>
       </View>
       
       <View style={styles.menuContainer}>
@@ -95,10 +208,7 @@ export default function Sidebar({ navigation, state }) {
               styles.menuItem,
               activeItem === index && styles.activeMenuItem
             ]}
-            onPress={() => {
-              setActiveItem(index);
-              item.onPress();
-            }}
+            onPress={item.onPress}
           >
             <View style={styles.menuItemContent}>
               <Text style={styles.menuIcon}>{item.icon}</Text>
@@ -114,8 +224,13 @@ export default function Sidebar({ navigation, state }) {
         ))}
       </View>
       
+      {/* Enhanced Footer */}
       <View style={styles.footer}>
-        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+        <View style={styles.footerInfo}>
+          <Text style={styles.footerText}>Stay organized, stay productive</Text>
+        </View>
+        
+        <TouchableOpacity style={styles.logoutButton} onPress={handleLogoutPress}>
           <Text style={styles.logoutIcon}>🚪</Text>
           <Text style={styles.logoutText}>Logout</Text>
         </TouchableOpacity>
@@ -130,27 +245,105 @@ const styles = StyleSheet.create({
     backgroundColor: '#1f2937',
   },
   header: {
-    paddingTop: 40,
-    paddingHorizontal: 24,
-    paddingBottom: 32,
+    paddingTop: 50,
+    paddingHorizontal: 20,
+    paddingBottom: 24,
     backgroundColor: '#111827',
     borderBottomWidth: 1,
     borderBottomColor: '#374151',
   },
-  title: {
-    fontSize: 24,
+  appInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 20,
+  },
+  appName: {
+    fontSize: 22,
     fontWeight: '700',
     color: '#ffffff',
-    marginBottom: 4,
   },
-  subtitle: {
-    fontSize: 14,
+  appVersion: {
+    fontSize: 12,
     color: '#9ca3af',
+    backgroundColor: '#374151',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
     fontWeight: '500',
+  },
+  userSection: {
+    marginTop: 8,
+  },
+  userProfileContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#1f2937',
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#374151',
+  },
+  profileImageContainer: {
+    position: 'relative',
+    marginRight: 12,
+  },
+  profileImage: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    borderWidth: 2,
+    borderColor: '#2563eb',
+  },
+  defaultProfileImage: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#2563eb',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#3b82f6',
+  },
+  defaultProfileText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#ffffff',
+  },
+  onlineIndicator: {
+    position: 'absolute',
+    bottom: 2,
+    right: 2,
+    width: 12,
+    height: 12,
+    backgroundColor: '#10b981',
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: '#111827',
+  },
+  userInfo: {
+    flex: 1,
+  },
+  userName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#ffffff',
+    marginBottom: 2,
+  },
+  userEmail: {
+    fontSize: 12,
+    color: '#9ca3af',
+    fontWeight: '400',
+  },
+  userId: {
+    fontSize: 10,
+    color: '#6b7280',
+    fontWeight: '400',
+    marginTop: 2,
   },
   menuContainer: {
     flex: 1,
-    paddingTop: 24,
+    paddingTop: 16,
   },
   menuItem: {
     flexDirection: 'row',
@@ -199,11 +392,21 @@ const styles = StyleSheet.create({
     borderRadius: 3,
   },
   footer: {
-    paddingHorizontal: 24,
+    paddingHorizontal: 20,
     paddingBottom: 32,
-    paddingTop: 24,
+    paddingTop: 20,
     borderTopWidth: 1,
     borderTopColor: '#374151',
+  },
+  footerInfo: {
+    marginBottom: 16,
+    alignItems: 'center',
+  },
+  footerText: {
+    fontSize: 12,
+    color: '#6b7280',
+    fontStyle: 'italic',
+    textAlign: 'center',
   },
   logoutButton: {
     flexDirection: 'row',

@@ -4,8 +4,10 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import axios from 'axios';
 import { IP_ADDRESS } from '../ip';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useAppContext } from '../App';
 
 export default function Home({ navigation }) {
+  const { refreshTrigger, triggerRefresh, updateCurrentRoute } = useAppContext();
   const [todos, setTodos] = useState([]);
   const [title, setTitle] = useState('');
   const [dueDate, setDueDate] = useState('');
@@ -28,7 +30,24 @@ export default function Home({ navigation }) {
 
   useEffect(() => {
     fetchTodos();
+    updateCurrentRoute('Home'); // Update current route when Home mounts
   }, []);
+
+  // Auto-refresh when refreshTrigger changes
+  useEffect(() => {
+    if (refreshTrigger > 0) {
+      fetchTodos();
+    }
+  }, [refreshTrigger]);
+
+  // Update current route when screen comes into focus
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      updateCurrentRoute('Home');
+    });
+
+    return unsubscribe;
+  }, [navigation, updateCurrentRoute]);
 
   useEffect(() => {
     const backAction = () => {
@@ -69,6 +88,7 @@ export default function Home({ navigation }) {
       setTitle('');
       setDueDate('');
       setShowAddForm(false);
+      triggerRefresh(); // Trigger refresh across all components
     } catch (error) {
       //console.error('Add todo error:', error.message);
       Alert.alert('Error', 'Failed to add todo');
@@ -90,6 +110,7 @@ export default function Home({ navigation }) {
       if (selectedTodo && selectedTodo.id === id) {
         setSelectedTodo(response.data);
       }
+      triggerRefresh(); // Trigger refresh across all components
     } catch (error) {
       //console.error('Toggle todo error:', error.message);
       Alert.alert('Error', 'Failed to toggle todo');
@@ -111,6 +132,7 @@ export default function Home({ navigation }) {
       setIsEditing(false);
       setEditTitle('');
       setEditDueDate('');
+      triggerRefresh(); // Trigger refresh across all components
     } catch (error) {
       //console.error('Update todo error:', error.message);
       Alert.alert('Error', 'Failed to update todo');
@@ -284,6 +306,7 @@ export default function Home({ navigation }) {
               // Update the todos list
               setTodos(todos.filter(todo => !selectedTodos.includes(todo.id)));
               exitSelectionMode();
+              triggerRefresh(); // Trigger refresh across all components
             } catch (error) {
               Alert.alert('Error', 'Failed to delete todos');
             }
@@ -300,6 +323,7 @@ export default function Home({ navigation }) {
         headers: { Authorization: `Bearer ${token}` },
       });
       setTodos(todos.filter((todo) => todo.id !== id));
+      triggerRefresh(); // Trigger refresh across all components
     } catch (error) {
       //console.error('Delete todo error:', error.message);
       Alert.alert('Error', 'Failed to delete todo');

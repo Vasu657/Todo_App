@@ -2,19 +2,29 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Alert, StyleSheet } from 'react-native';
 import axios from 'axios';
 import { IP_ADDRESS } from '../ip';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useAppContext } from '../App';
 
 export default function Login({ navigation }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const { handleLogin } = useAppContext();
 
-  const handleLogin = async () => {
+  const handleLoginPress = async () => {
+    if (!email.trim() || !password.trim()) {
+      Alert.alert('Error', 'Please fill in all fields');
+      return;
+    }
+
+    setLoading(true);
     try {
       const response = await axios.post(`${IP_ADDRESS}/api/auth/login`, { email, password });
-      await AsyncStorage.setItem('token', response.data.token);
-      navigation.navigate('Home');
+      await handleLogin(response.data.token);
+      // Navigation will be handled automatically by the context
     } catch (error) {
       Alert.alert('Error', error.response?.data?.message || 'Login failed');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -38,8 +48,14 @@ export default function Login({ navigation }) {
         secureTextEntry
         placeholderTextColor="#888"
       />
-      <TouchableOpacity style={styles.button} onPress={handleLogin}>
-        <Text style={styles.buttonText}>Login</Text>
+      <TouchableOpacity 
+        style={[styles.button, loading && styles.disabledButton]} 
+        onPress={handleLoginPress}
+        disabled={loading}
+      >
+        <Text style={styles.buttonText}>
+          {loading ? 'Logging in...' : 'Login'}
+        </Text>
       </TouchableOpacity>
       <TouchableOpacity onPress={() => navigation.navigate('Register')}>
         <Text style={styles.link}>Don't have an account? Register</Text>
@@ -91,5 +107,9 @@ const styles = StyleSheet.create({
     color: '#2563eb',
     textAlign: 'center',
     fontSize: 16,
+  },
+  disabledButton: {
+    backgroundColor: '#9ca3af',
+    opacity: 0.6,
   },
 });
