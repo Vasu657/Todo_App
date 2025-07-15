@@ -13,7 +13,6 @@ export default function Sidebar({ navigation, state }) {
   const [userProfile, setUserProfile] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Fetch user profile data
   const fetchUserProfile = async () => {
     try {
       const token = await AsyncStorage.getItem('token');
@@ -38,26 +37,24 @@ export default function Sidebar({ navigation, state }) {
     }
   };
 
-  // Initial profile fetch
   useEffect(() => {
     fetchUserProfile();
   }, []);
 
-  // Refresh profile when refreshTrigger changes
   useEffect(() => {
     if (refreshTrigger > 0) {
       fetchUserProfile();
     }
   }, [refreshTrigger]);
 
-  // Update active item based on current route from global state
   useEffect(() => {
     const routeToIndex = {
       'Home': 0,
-      'Profile': 2, // Profile is now at index 2 after removing completed
-      'Settings': 3, // Settings is at index 3 in the menuItems array
-      'Help': 4,    // Help is at index 4 in the menuItems array
-      'About': 5,   // About is at index 5 in the menuItems array
+      'Calendar': 1,
+      'Profile': 2,
+      'Settings': 3,
+      'Help': 4,
+      'About': 5,
     };
     
     const newActiveIndex = routeToIndex[currentRoute] !== undefined ? routeToIndex[currentRoute] : 0;
@@ -65,7 +62,6 @@ export default function Sidebar({ navigation, state }) {
     console.log('Current route:', currentRoute, 'Active index:', newActiveIndex);
   }, [currentRoute]);
 
-  // Also update based on navigation state as fallback
   useEffect(() => {
     if (state && state.routes && state.index !== undefined) {
       const currentRouteFromState = state.routes[state.index];
@@ -73,6 +69,7 @@ export default function Sidebar({ navigation, state }) {
       
       const routeToIndex = {
         'Home': 0,
+        'Calendar': 1,
         'Profile': 2,
         'Settings': 3,
         'Help': 4,
@@ -98,7 +95,6 @@ export default function Sidebar({ navigation, state }) {
           style: 'destructive',
           onPress: async () => {
             await handleLogout();
-            // Navigation will be handled automatically by the context
           },
         },
       ],
@@ -119,7 +115,7 @@ export default function Sidebar({ navigation, state }) {
       title: 'Calendar',
       icon: '📅',
       onPress: () => {
-        Alert.alert('Coming Soon', 'Calendar feature will be available soon!');
+        navigation.navigate('Calendar');
       }
     },
     {
@@ -158,14 +154,12 @@ export default function Sidebar({ navigation, state }) {
 
   return (
     <View style={styles.container}>
-      {/* Enhanced Header with User Profile */}
       <View style={styles.header}>
         <View style={styles.appInfo}>
           <Text style={styles.appName}>Todo App</Text>
           <Text style={styles.appVersion}>v1.0</Text>
         </View>
         
-        {/* User Profile Section */}
         <View style={styles.userSection}>
           <TouchableOpacity 
             style={styles.userProfileContainer}
@@ -231,7 +225,6 @@ export default function Sidebar({ navigation, state }) {
         ))}
       </View>
       
-      {/* Enhanced Footer */}
       <View style={styles.footer}>
         <View style={styles.footerInfo}>
           <Text style={styles.footerText}>Stay organized, stay productive</Text>

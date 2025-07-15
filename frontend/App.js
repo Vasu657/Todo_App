@@ -11,12 +11,12 @@ import Profile from './screens/Profile';
 import About from './screens/About';
 import Help from './screens/Help';
 import Settings from './screens/Settings';
+import Calendar from './screens/Calendar';
 import Sidebar from './screens/Sidebar';
 
 const Drawer = createDrawerNavigator();
 const Stack = createStackNavigator();
 
-// Create a context for global state management and auto-refresh
 const AppContext = createContext();
 
 export const useAppContext = () => {
@@ -27,24 +27,20 @@ export const useAppContext = () => {
   return context;
 };
 
-// App Provider for global state management
 const AppProvider = ({ children }) => {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [currentRoute, setCurrentRoute] = useState('Home');
 
-  // Function to trigger refresh across all components
   const triggerRefresh = () => {
     setRefreshTrigger(prev => prev + 1);
   };
 
-  // Function to update current route
   const updateCurrentRoute = (routeName) => {
     setCurrentRoute(routeName);
   };
 
-  // Check authentication status on app start
   useEffect(() => {
     checkAuthStatus();
   }, []);
@@ -61,7 +57,6 @@ const AppProvider = ({ children }) => {
     }
   };
 
-  // Function to handle login
   const handleLogin = async (token) => {
     try {
       await AsyncStorage.setItem('token', token);
@@ -72,22 +67,13 @@ const AppProvider = ({ children }) => {
     }
   };
 
-  // Function to handle logout with complete cleanup
   const handleLogout = async () => {
     try {
-      // Clear all AsyncStorage data
       await AsyncStorage.clear();
-      
-      // Reset authentication state
       setIsAuthenticated(false);
-      
-      // Trigger refresh to update all components
       triggerRefresh();
-      
-   //   console.log('Logout completed successfully');
     } catch (error) {
       console.error('Error during logout:', error);
-      // Fallback: try to remove just the token
       try {
         await AsyncStorage.removeItem('token');
         setIsAuthenticated(false);
@@ -117,7 +103,6 @@ const AppProvider = ({ children }) => {
   );
 };
 
-// Auth Stack for Login/Register
 const AuthStack = () => (
   <Stack.Navigator screenOptions={{ headerShown: false }}>
     <Stack.Screen name="Login" component={Login} />
@@ -125,7 +110,6 @@ const AuthStack = () => (
   </Stack.Navigator>
 );
 
-// Main App Stack for authenticated users
 const MainDrawer = () => {
   const { updateCurrentRoute } = useAppContext();
 
@@ -163,6 +147,7 @@ const MainDrawer = () => {
       }}
     >
       <Drawer.Screen name="Home" component={Home} />
+      <Drawer.Screen name="Calendar" component={Calendar} />
       <Drawer.Screen name="Profile" component={Profile} />
       <Drawer.Screen name="Settings" component={Settings} />
       <Drawer.Screen name="Help" component={Help} />
@@ -171,7 +156,6 @@ const MainDrawer = () => {
   );
 };
 
-// Loading Screen Component
 const LoadingScreen = () => (
   <View style={loadingStyles.container}>
     <ActivityIndicator size="large" color="#2563eb" />
@@ -179,7 +163,6 @@ const LoadingScreen = () => (
   </View>
 );
 
-// Main App Component
 const AppContent = () => {
   const { isAuthenticated, isLoading } = useAppContext();
 
@@ -194,7 +177,6 @@ const AppContent = () => {
   );
 };
 
-// Loading Screen Styles
 const loadingStyles = StyleSheet.create({
   container: {
     flex: 1,

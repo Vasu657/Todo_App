@@ -36,6 +36,60 @@ router.get('/', authenticate, async (req, res) => {
   }
 });
 
+router.get('/date/:date', authenticate, async (req, res) => {
+  const { date } = req.params;
+  console.log('Received date parameter:', date);
+  try {
+    const db = await mysql.createConnection({
+      host: process.env.DB_HOST,
+      user: process.env.DB_USER,
+      password: process.env.DB_PASSWORD,
+      database: process.env.DB_NAME,
+    });
+
+    const formattedDate = new Date(date).toISOString().split('T')[0];
+    console.log('Formatted date for query:', formattedDate);
+
+    const [rows] = await db.execute(
+      'SELECT id, title, completed, due_date, created_at FROM todos WHERE user_id = ? AND DATE(due_date) = ? ORDER BY created_at DESC',
+      [req.user.id, formattedDate]
+    );
+    console.log('Query result:', rows);
+    res.json(rows);
+    await db.close();
+  } catch (error) {
+    console.error('Database error:', error.message);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+router.get('/created/:date', authenticate, async (req, res) => {
+  const { date } = req.params;
+  console.log('Received created date parameter:', date);
+  try {
+    const db = await mysql.createConnection({
+      host: process.env.DB_HOST,
+      user: process.env.DB_USER,
+      password: process.env.DB_PASSWORD,
+      database: process.env.DB_NAME,
+    });
+
+    const formattedDate = new Date(date).toISOString().split('T')[0];
+    console.log('Formatted created date for query:', formattedDate);
+
+    const [rows] = await db.execute(
+      'SELECT id, title, completed, due_date, created_at FROM todos WHERE user_id = ? AND DATE(created_at) = ? ORDER BY created_at DESC',
+      [req.user.id, formattedDate]
+    );
+    console.log('Query result for created date:', rows);
+    res.json(rows);
+    await db.close();
+  } catch (error) {
+    console.error('Database error:', error.message);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 router.post('/', authenticate, async (req, res) => {
   const { title, due_date } = req.body;
   if (!title) return res.status(400).json({ message: 'Title field is required' });
