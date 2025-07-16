@@ -590,6 +590,13 @@ export default function Home({ navigation }) {
         />
       </View>
 
+      {/* Notification Banner */}
+      <NotificationBanner 
+        todos={todos} 
+        onDismiss={() => {/* Handle dismiss */}} 
+        onViewOverdue={() => {/* Handle view overdue */}}
+      />
+
       {/* Floating Add Button */}
       {!isSelectionMode && (
         <TouchableOpacity 
