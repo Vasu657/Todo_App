@@ -21,7 +21,7 @@ import { IP_ADDRESS } from '../ip';
 const { width } = Dimensions.get('window');
 
 export default function Settings({ navigation }) {
-  const { updateCurrentRoute, refreshTrigger, triggerRefresh } = useAppContext();
+  const { updateCurrentRoute, refreshTrigger, triggerRefresh, handleLogout } = useAppContext();
   const [profileData, setProfileData] = useState(null);
   const [expandedSection, setExpandedSection] = useState(null);
   const [animatedValues, setAnimatedValues] = useState({});
@@ -179,6 +179,59 @@ export default function Settings({ navigation }) {
     );
   };
 
+  const deleteAccount = async () => {
+    Alert.alert(
+      'Delete Account',
+      '⚠️ WARNING: This action cannot be undone!\n\n• All your data will be permanently deleted\n• Your todos, settings, and profile will be lost\n• This data is end-to-end encrypted and cannot be recovered\n• You will need to create a new account to use the app again\n\nAre you absolutely sure you want to delete your account?',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Delete Forever',
+          onPress: async () => {
+            try {
+              const token = await AsyncStorage.getItem('token');
+              if (!token) {
+                Alert.alert('Error', 'Authentication required');
+                return;
+              }
+
+              const response = await fetch(`${IP_ADDRESS}/api/profile/delete`, {
+                method: 'DELETE',
+                headers: {
+                  'Authorization': `Bearer ${token}`,
+                  'Content-Type': 'application/json',
+                },
+              });
+
+              if (response.ok) {
+                Alert.alert(
+                  'Account Deleted',
+                  'Your account has been permanently deleted. Thank you for using our app.',
+                  [
+                    {
+                      text: 'OK',
+                      onPress: () => handleLogout(),
+                    },
+                  ]
+                );
+              } else {
+                const errorData = await response.json();
+                Alert.alert('Error', errorData.message || 'Failed to delete account');
+              }
+            } catch (error) {
+              console.error('Delete account error:', error);
+              Alert.alert('Error', 'Network error. Please try again.');
+            }
+          },
+          style: 'destructive',
+        },
+      ]
+    );
+  };
+
   const settingSections = [
     {
       id: 'account',
@@ -186,31 +239,28 @@ export default function Settings({ navigation }) {
       icon: '👤',
       content: (
         <View style={styles.sectionContent}>
-          <View style={styles.settingItem}>
-            <Text style={styles.settingLabel}>Profile Preview</Text>
-            <TouchableOpacity 
-              style={styles.profilePreview}
-              onPress={() => navigation.navigate('Profile')}
-            >
-              {profileData && profileData.profilePhoto ? (
-                <Image 
-                  source={{ uri: profileData.profilePhoto }} 
-                  style={styles.previewPhoto} 
-                />
-              ) : (
-                <View style={styles.defaultPreviewPhoto}>
-                  <Text style={styles.defaultPhotoText}>
-                    {profileData && profileData.name ? profileData.name.charAt(0).toUpperCase() : 'U'}
-                  </Text>
-                </View>
-              )}
-              <View style={styles.previewInfo}>
-                <Text style={styles.previewName}>{profileData?.name || 'User'}</Text>
-                <Text style={styles.previewEmail}>{profileData?.email || 'user@example.com'}</Text>
+          <TouchableOpacity 
+            style={styles.profilePreview}
+            onPress={() => navigation.navigate('Profile')}
+          >
+            {profileData && profileData.profilePhoto ? (
+              <Image 
+                source={{ uri: profileData.profilePhoto }} 
+                style={styles.previewPhoto} 
+              />
+            ) : (
+              <View style={styles.defaultPreviewPhoto}>
+                <Text style={styles.defaultPhotoText}>
+                  {profileData && profileData.name ? profileData.name.charAt(0).toUpperCase() : 'U'}
+                </Text>
               </View>
-              <Text style={styles.viewProfileText}>View Profile</Text>
-            </TouchableOpacity>
-          </View>
+            )}
+            <View style={styles.previewInfo}>
+              <Text style={styles.previewName}>{profileData?.name || 'User'}</Text>
+              <Text style={styles.previewEmail}>{profileData?.email || 'user@example.com'}</Text>
+            </View>
+            <Text style={styles.viewProfileText}>View Profile</Text>
+          </TouchableOpacity>
           
           <TouchableOpacity 
             style={styles.actionButton}
@@ -231,13 +281,7 @@ export default function Settings({ navigation }) {
                 },
                 {
                   text: 'Logout',
-                  onPress: async () => {
-                    await AsyncStorage.removeItem('token');
-                    navigation.reset({
-                      index: 0,
-                      routes: [{ name: 'Login' }],
-                    });
-                  },
+                  onPress: handleLogout,
                   style: 'destructive',
                 },
               ]
@@ -245,74 +289,6 @@ export default function Settings({ navigation }) {
           >
             <Text style={styles.dangerButtonText}>Logout</Text>
           </TouchableOpacity>
-        </View>
-      ),
-    },
-    {
-      id: 'appearance',
-      title: 'Appearance',
-      icon: '🎨',
-      content: (
-        <View style={styles.sectionContent}>
-          <View style={styles.settingItem}>
-            <Text style={styles.settingLabel}>Dark Mode</Text>
-            <Switch
-              value={darkMode}
-              onValueChange={setDarkMode}
-              trackColor={{ false: '#d1d5db', true: '#93c5fd' }}
-              thumbColor={darkMode ? '#2563eb' : '#f3f4f6'}
-            />
-          </View>
-          
-          <View style={styles.settingItem}>
-            <Text style={styles.settingLabel}>Font Size</Text>
-            <View style={styles.segmentedControl}>
-              {['Small', 'Medium', 'Large'].map((size) => (
-                <TouchableOpacity
-                  key={size}
-                  style={[
-                    styles.segmentedButton,
-                    fontSize === size && styles.segmentedButtonActive,
-                  ]}
-                  onPress={() => setFontSize(size)}
-                >
-                  <Text
-                    style={[
-                      styles.segmentedButtonText,
-                      fontSize === size && styles.segmentedButtonTextActive,
-                    ]}
-                  >
-                    {size}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-          
-          <View style={styles.settingItem}>
-            <Text style={styles.settingLabel}>Language</Text>
-            <View style={styles.segmentedControl}>
-              {['English', 'Spanish', 'French'].map((lang) => (
-                <TouchableOpacity
-                  key={lang}
-                  style={[
-                    styles.segmentedButton,
-                    language === lang && styles.segmentedButtonActive,
-                  ]}
-                  onPress={() => setLanguage(lang)}
-                >
-                  <Text
-                    style={[
-                      styles.segmentedButtonText,
-                      language === lang && styles.segmentedButtonTextActive,
-                    ]}
-                  >
-                    {lang}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
         </View>
       ),
     },
@@ -386,21 +362,7 @@ export default function Settings({ navigation }) {
           
           <TouchableOpacity 
             style={[styles.actionButton, styles.dangerButton]}
-            onPress={() => Alert.alert(
-              'Delete Account',
-              'Are you sure you want to delete your account? This action cannot be undone.',
-              [
-                {
-                  text: 'Cancel',
-                  style: 'cancel',
-                },
-                {
-                  text: 'Delete',
-                  onPress: () => Alert.alert('Account Deletion', 'This feature is not implemented in the demo.'),
-                  style: 'destructive',
-                },
-              ]
-            )}
+            onPress={deleteAccount}
           >
             <Text style={styles.dangerButtonText}>Delete Account</Text>
           </TouchableOpacity>
@@ -439,11 +401,9 @@ export default function Settings({ navigation }) {
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {/* Hero Section */}
         <View style={styles.heroSection}>
-          <Image
-            source={require('../assets/icon.png')}
-            style={styles.heroImage}
-            resizeMode="contain"
-          />
+          <View style={styles.heroIcon}>
+            <Text style={styles.heroIconText}>⚙️</Text>
+          </View>
           <Text style={styles.heroTitle}>App Settings</Text>
           <Text style={styles.heroSubtitle}>
             Customize your app experience
@@ -592,10 +552,17 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 5,
   },
-  heroImage: {
+  heroIcon: {
     width: 80,
     height: 80,
+    borderRadius: 40,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
     marginBottom: 16,
+  },
+  heroIconText: {
+    fontSize: 40,
   },
   heroTitle: {
     fontSize: 24,

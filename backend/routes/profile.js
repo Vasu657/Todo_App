@@ -208,4 +208,57 @@ router.put('/update', verifyToken, async (req, res) => {
   }
 });
 
+// Delete user account
+router.delete('/delete', verifyToken, async (req, res) => {
+  console.log('Account deletion route accessed by user ID:', req.user.id);
+  
+  try {
+    const db = await mysql.createConnection({
+      host: process.env.DB_HOST,
+      user: process.env.DB_USER,
+      password: process.env.DB_PASSWORD,
+      database: process.env.DB_NAME,
+    });
+
+    console.log('Database connection established for account deletion');
+
+    // Start transaction to ensure data consistency
+    await db.beginTransaction();
+
+    try {
+      // Delete user's todos first (foreign key constraint)
+      const [todoDeleteResult] = await db.execute(
+        'DELETE FROM todos WHERE user_id = ?', 
+        [req.user.id]
+      );
+      console.log(`Deleted ${todoDeleteResult.affectedRows} todos for user ID:`, req.user.id);
+
+      // Delete the user account
+      const [userDeleteResult] = await db.execute(
+        'DELETE FROM users WHERE id = ?', 
+        [req.user.id]
+      );
+
+      if (userDeleteResult.affectedRows === 0) {
+        await db.rollback();
+        await db.close();
+        return res.status(404).json({ message: 'User not found' });
+      }
+
+      // Commit the transaction
+      await db.commit();
+      console.log('Account deletion completed successfully for user ID:', req.user.id);
+
+      await db.close();
+      res.json({ message: 'Account deleted successfully' });
+    } catch (transactionError) {
+      await db.rollback();
+      throw transactionError;
+    }
+  } catch (error) {
+    console.error('Account deletion error:', error);
+    res.status(500).json({ message: 'Server error during account deletion' });
+  }
+});
+
 module.exports = router;
