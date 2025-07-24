@@ -2,11 +2,14 @@ const express = require('express');
 const cors = require('cors');
 const mysql = require('mysql2');
 const dotenv = require('dotenv');
+
+// Configure dotenv silently (disable debug messages)
+dotenv.config({ debug: false });
+
 const authRoutes = require('./routes/auth');
 const todoRoutes = require('./routes/todos');
 const profileRoutes = require('./routes/profile');
 const IP_ADDRESS = require('./ip');
-
 
 const app = express();
 app.use(cors({
@@ -26,7 +29,6 @@ const db = mysql.createConnection({
 
 db.connect((err) => {
   if (err) {
-    //console.error('MySQL connection error:', err);
     throw err;
   }
   console.log('MySQL Connected');
@@ -34,7 +36,6 @@ db.connect((err) => {
 
 // Add logging middleware
 app.use((req, res, next) => {
-  //console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
   next();
 });
 

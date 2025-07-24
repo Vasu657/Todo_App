@@ -51,12 +51,10 @@ export default function Sidebar({ navigation, state }) {
     const routeToIndex = {
       'Home': 0,
       'Calendar': 1,
-      'Stats': 2,
-      'Upcoming': 3,
-      'Profile': 4,
-      'Settings': 5,
-      'Help': 6,
-      'About': 7,
+      'Profile': 2,
+      'Settings': 3,
+      'Help': 4,
+      'About': 5,
     };
     
     const newActiveIndex = routeToIndex[currentRoute] !== undefined ? routeToIndex[currentRoute] : 0;
@@ -71,12 +69,10 @@ export default function Sidebar({ navigation, state }) {
       const routeToIndex = {
         'Home': 0,
         'Calendar': 1,
-        'Stats': 2,
-        'Upcoming': 3,
-        'Profile': 4,
-        'Settings': 5,
-        'Help': 6,
-        'About': 7,
+        'Profile': 2,
+        'Settings': 3,
+        'Help': 4,
+        'About': 5,
       };
       
       const newActiveIndex = routeToIndex[routeName] !== undefined ? routeToIndex[routeName] : 0;
@@ -121,22 +117,7 @@ export default function Sidebar({ navigation, state }) {
         navigation.navigate('Calendar');
       }
     },
-    {
-      id: 'stats',
-      title: 'Statistics',
-      icon: '📊',
-      onPress: () => {
-        navigation.navigate('Stats');
-      }
-    },
-    {
-      id: 'upcoming',
-      title: 'Upcoming & Overdue',
-      icon: '⏰',
-      onPress: () => {
-        navigation.navigate('Upcoming');
-      }
-    },
+
     {
       id: 'profile',
       title: 'Profile',

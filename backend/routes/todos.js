@@ -1,9 +1,7 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const mysql = require('mysql2/promise');
-const dotenv = require('dotenv');
 
-dotenv.config();
 const router = express.Router();
 
 const authenticate = async (req, res, next) => {
@@ -55,7 +53,6 @@ router.get('/date/:date', authenticate, async (req, res) => {
     res.json(rows);
     await db.close();
   } catch (error) {
-    console.error('Database error:', error.message);
     res.status(500).json({ message: 'Server error' });
   }
 });
@@ -79,7 +76,6 @@ router.get('/created/:date', authenticate, async (req, res) => {
     res.json(rows);
     await db.close();
   } catch (error) {
-    console.error('Database error:', error.message);
     res.status(500).json({ message: 'Server error' });
   }
 });
@@ -195,7 +191,6 @@ router.get('/upcoming', authenticate, async (req, res) => {
     res.json(rows);
     await db.close();
   } catch (error) {
-    console.error('Error fetching upcoming todos:', error.message);
     res.status(500).json({ message: 'Server error' });
   }
 });
@@ -226,7 +221,6 @@ router.get('/overdue', authenticate, async (req, res) => {
     res.json(rows);
     await db.close();
   } catch (error) {
-    console.error('Error fetching overdue todos:', error.message);
     res.status(500).json({ message: 'Server error' });
   }
 });
@@ -325,7 +319,6 @@ router.get('/stats', authenticate, async (req, res) => {
     res.json(stats);
     await db.close();
   } catch (error) {
-    console.error('Error fetching todo statistics:', error.message);
     res.status(500).json({ message: 'Server error' });
   }
 });
