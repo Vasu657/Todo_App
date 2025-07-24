@@ -38,7 +38,6 @@ router.get('/', authenticate, async (req, res) => {
 
 router.get('/date/:date', authenticate, async (req, res) => {
   const { date } = req.params;
-  console.log('Received date parameter:', date);
   try {
     const db = await mysql.createConnection({
       host: process.env.DB_HOST,
@@ -48,13 +47,11 @@ router.get('/date/:date', authenticate, async (req, res) => {
     });
 
     const formattedDate = new Date(date).toISOString().split('T')[0];
-    console.log('Formatted date for query:', formattedDate);
 
     const [rows] = await db.execute(
       'SELECT id, title, completed, due_date, created_at FROM todos WHERE user_id = ? AND DATE(due_date) = ? ORDER BY created_at DESC',
       [req.user.id, formattedDate]
     );
-    console.log('Query result:', rows);
     res.json(rows);
     await db.close();
   } catch (error) {
@@ -65,7 +62,6 @@ router.get('/date/:date', authenticate, async (req, res) => {
 
 router.get('/created/:date', authenticate, async (req, res) => {
   const { date } = req.params;
-  console.log('Received created date parameter:', date);
   try {
     const db = await mysql.createConnection({
       host: process.env.DB_HOST,
@@ -75,13 +71,11 @@ router.get('/created/:date', authenticate, async (req, res) => {
     });
 
     const formattedDate = new Date(date).toISOString().split('T')[0];
-    console.log('Formatted created date for query:', formattedDate);
 
     const [rows] = await db.execute(
       'SELECT id, title, completed, due_date, created_at FROM todos WHERE user_id = ? AND DATE(created_at) = ? ORDER BY created_at DESC',
       [req.user.id, formattedDate]
     );
-    console.log('Query result for created date:', rows);
     res.json(rows);
     await db.close();
   } catch (error) {
@@ -167,6 +161,171 @@ router.delete('/:id', authenticate, async (req, res) => {
     res.status(200).json({ message: 'Todo deleted' });
     await db.close();
   } catch (error) {
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Get upcoming todos (due within next 7 days)
+router.get('/upcoming', authenticate, async (req, res) => {
+  try {
+    const db = await mysql.createConnection({
+      host: process.env.DB_HOST,
+      user: process.env.DB_USER,
+      password: process.env.DB_PASSWORD,
+      database: process.env.DB_NAME,
+    });
+
+    const today = new Date();
+    const nextWeek = new Date();
+    nextWeek.setDate(today.getDate() + 7);
+    
+    const todayStr = today.toISOString().split('T')[0];
+    const nextWeekStr = nextWeek.toISOString().split('T')[0];
+
+    const [rows] = await db.execute(
+      `SELECT id, title, completed, due_date, created_at 
+       FROM todos 
+       WHERE user_id = ? 
+       AND due_date IS NOT NULL 
+       AND DATE(due_date) BETWEEN ? AND ? 
+       ORDER BY due_date ASC, created_at DESC`,
+      [req.user.id, todayStr, nextWeekStr]
+    );
+    
+    res.json(rows);
+    await db.close();
+  } catch (error) {
+    console.error('Error fetching upcoming todos:', error.message);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Get overdue todos
+router.get('/overdue', authenticate, async (req, res) => {
+  try {
+    const db = await mysql.createConnection({
+      host: process.env.DB_HOST,
+      user: process.env.DB_USER,
+      password: process.env.DB_PASSWORD,
+      database: process.env.DB_NAME,
+    });
+
+    const today = new Date().toISOString().split('T')[0];
+
+    const [rows] = await db.execute(
+      `SELECT id, title, completed, due_date, created_at 
+       FROM todos 
+       WHERE user_id = ? 
+       AND due_date IS NOT NULL 
+       AND DATE(due_date) < ? 
+       AND completed = 0
+       ORDER BY due_date ASC`,
+      [req.user.id, today]
+    );
+    
+    res.json(rows);
+    await db.close();
+  } catch (error) {
+    console.error('Error fetching overdue todos:', error.message);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Get todo statistics
+router.get('/stats', authenticate, async (req, res) => {
+  try {
+    const db = await mysql.createConnection({
+      host: process.env.DB_HOST,
+      user: process.env.DB_USER,
+      password: process.env.DB_PASSWORD,
+      database: process.env.DB_NAME,
+    });
+
+    // Get overall stats
+    const [totalStats] = await db.execute(
+      'SELECT COUNT(*) as total, SUM(completed) as completed FROM todos WHERE user_id = ?',
+      [req.user.id]
+    );
+
+    // Get today's stats
+    const today = new Date().toISOString().split('T')[0];
+    const [todayStats] = await db.execute(
+      'SELECT COUNT(*) as total, SUM(completed) as completed FROM todos WHERE user_id = ? AND DATE(created_at) = ?',
+      [req.user.id, today]
+    );
+
+    // Get this week's stats
+    const weekStart = new Date();
+    weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+    const weekStartStr = weekStart.toISOString().split('T')[0];
+    
+    const [weekStats] = await db.execute(
+      'SELECT COUNT(*) as total, SUM(completed) as completed FROM todos WHERE user_id = ? AND DATE(created_at) >= ?',
+      [req.user.id, weekStartStr]
+    );
+
+    // Get this month's stats
+    const monthStart = new Date();
+    monthStart.setDate(1);
+    const monthStartStr = monthStart.toISOString().split('T')[0];
+    
+    const [monthStats] = await db.execute(
+      'SELECT COUNT(*) as total, SUM(completed) as completed FROM todos WHERE user_id = ? AND DATE(created_at) >= ?',
+      [req.user.id, monthStartStr]
+    );
+
+    // Get overdue count
+    const [overdueStats] = await db.execute(
+      `SELECT COUNT(*) as overdue FROM todos 
+       WHERE user_id = ? 
+       AND due_date IS NOT NULL 
+       AND DATE(due_date) < ? 
+       AND completed = 0`,
+      [req.user.id, today]
+    );
+
+    // Get upcoming count (next 7 days)
+    const nextWeek = new Date();
+    nextWeek.setDate(nextWeek.getDate() + 7);
+    const nextWeekStr = nextWeek.toISOString().split('T')[0];
+    
+    const [upcomingStats] = await db.execute(
+      `SELECT COUNT(*) as upcoming FROM todos 
+       WHERE user_id = ? 
+       AND due_date IS NOT NULL 
+       AND DATE(due_date) BETWEEN ? AND ?`,
+      [req.user.id, today, nextWeekStr]
+    );
+
+    const stats = {
+      total: {
+        total: totalStats[0].total || 0,
+        completed: totalStats[0].completed || 0,
+        pending: (totalStats[0].total || 0) - (totalStats[0].completed || 0)
+      },
+      today: {
+        total: todayStats[0].total || 0,
+        completed: todayStats[0].completed || 0,
+        pending: (todayStats[0].total || 0) - (todayStats[0].completed || 0)
+      },
+      week: {
+        total: weekStats[0].total || 0,
+        completed: weekStats[0].completed || 0,
+        pending: (weekStats[0].total || 0) - (weekStats[0].completed || 0)
+      },
+      month: {
+        total: monthStats[0].total || 0,
+        completed: monthStats[0].completed || 0,
+        pending: (monthStats[0].total || 0) - (monthStats[0].completed || 0)
+      },
+      overdue: overdueStats[0].overdue || 0,
+      upcoming: upcomingStats[0].upcoming || 0
+    };
+
+    res.json(stats);
+    await db.close();
+  } catch (error) {
+    console.error('Error fetching todo statistics:', error.message);
     res.status(500).json({ message: 'Server error' });
   }
 });

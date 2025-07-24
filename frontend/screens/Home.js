@@ -72,13 +72,13 @@ export default function Home({ navigation }) {
 
   // Auto-sliding effect for welcome card
   useEffect(() => {
-    if (!isSelectionMode) {
+    if (!isSelectionMode && todos.length === 0) {
       const interval = setInterval(() => {
         setCurrentSlide((prevSlide) => (prevSlide + 1) % 3);
       }, 3000);
       return () => clearInterval(interval);
     }
-  }, [isSelectionMode]);
+  }, [isSelectionMode, todos.length]);
 
   const fetchTodos = async () => {
     try {
@@ -223,6 +223,35 @@ export default function Home({ navigation }) {
     });
   };
 
+  const formatMonthYear = (dateString) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long'
+    });
+  };
+
+  const getCurrentMonthDate = () => {
+    const now = new Date();
+    return now.toLocaleDateString('en-US', {
+      month: 'long',
+      day: 'numeric'
+    });
+  };
+
+  const groupTodosByMonth = (todos) => {
+    const grouped = {};
+    todos.forEach(todo => {
+      const monthYear = formatMonthYear(todo.created_at);
+      if (!grouped[monthYear]) {
+        grouped[monthYear] = [];
+      }
+      grouped[monthYear].push(todo);
+    });
+    return grouped;
+  };
+
   const formatTime = (dateString) => {
     if (!dateString) return '';
     const date = new Date(dateString);
@@ -365,111 +394,36 @@ export default function Home({ navigation }) {
   };
 
   const openMenu = () => {
-    //console.log('Menu button clicked, opening sidebar');
     navigation.openDrawer();
   };
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={openMenu} style={styles.menuButton}>
-          <Text style={styles.menuIcon}>☰</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Todo App</Text>
-        <TouchableOpacity 
-          style={styles.profileButton}
-          onPress={() => navigation.navigate('Profile')}
-        >
-          {profileData && profileData.profilePhoto ? (
-            <Image 
-              source={{ uri: profileData.profilePhoto }} 
-              style={styles.profilePhoto} 
-              onError={() => console.log('Error loading profile image')}
-            />
-          ) : (
-            <View style={styles.defaultPhoto}>
-              <Text style={styles.defaultPhotoText}>
-                {profileData && profileData.name ? profileData.name.charAt(0).toUpperCase() : 'U'}
-              </Text>
-            </View>
-          )}
-        </TouchableOpacity>
-      </View>
-      <View style={styles.content}>
-        {isSelectionMode ? (
-          <View style={styles.selectionContainer}>
-            <View style={styles.selectionHeader}>
-              <TouchableOpacity onPress={exitSelectionMode} style={styles.cancelSelectionButton}>
-                <Text style={styles.cancelSelectionText}>✕</Text>
-              </TouchableOpacity>
-              <Text style={styles.selectionTitle}>
-                {selectedTodos.length} selected
-              </Text>
-            </View>
-            <View style={styles.selectionActions}>
-              <TouchableOpacity 
-                style={styles.selectAllButton} 
-                onPress={selectAllTodos}
-              >
-                <Text style={styles.selectAllText}>
-                  {selectedTodos.length === todos.length ? 'Deselect All' : 'Select All'}
+      <View style={styles.headerContainer}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={openMenu} style={styles.menuButton}>
+            <Text style={styles.menuIcon}>☰</Text>
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Todo App</Text>
+          <TouchableOpacity 
+            style={styles.profileButton}
+            onPress={() => navigation.navigate('Profile')}
+          >
+            {profileData && profileData.profilePhoto ? (
+              <Image 
+                source={{ uri: profileData.profilePhoto }} 
+                style={styles.profilePhoto} 
+                onError={() => {}}
+              />
+            ) : (
+              <View style={styles.defaultPhoto}>
+                <Text style={styles.defaultPhotoText}>
+                  {profileData && profileData.name ? profileData.name.charAt(0).toUpperCase() : 'U'}
                 </Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={[styles.deleteSelectedButton, selectedTodos.length === 0 && styles.disabledButton]} 
-                onPress={deleteSelectedTodos}
-                disabled={selectedTodos.length === 0}
-              >
-                <Text style={[styles.deleteSelectedText, selectedTodos.length === 0 && styles.disabledText]}>
-                  Delete
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        ) : (
-          <View style={styles.welcomeCard}>
-            <View style={styles.slideContainer}>
-              {currentSlide === 0 && (
-                <View style={styles.slide}>
-                  <View style={styles.slideIcon}>
-                    <Text style={styles.slideIconText}>✨</Text>
-                  </View>
-                  <Text style={styles.slideTitle}>Welcome to Todo App</Text>
-                  <Text style={styles.slideSubtitle}>Organize your life with ease</Text>
-                </View>
-              )}
-              {currentSlide === 1 && (
-                <View style={styles.slide}>
-                  <View style={styles.slideIcon}>
-                    <Text style={styles.slideIconText}>🎯</Text>
-                  </View>
-                  <Text style={styles.slideTitle}>Stay Productive</Text>
-                  <Text style={styles.slideSubtitle}>Track tasks & set due dates</Text>
-                </View>
-              )}
-              {currentSlide === 2 && (
-                <View style={styles.slide}>
-                  <View style={styles.slideIcon}>
-                    <Text style={styles.slideIconText}>⚡</Text>
-                  </View>
-                  <Text style={styles.slideTitle}>Quick Actions</Text>
-                  <Text style={styles.slideSubtitle}>Long press to select multiple</Text>
-                </View>
-              )}
-            </View>
-            <View style={styles.slideIndicators}>
-              {[0, 1, 2].map((index) => (
-                <View
-                  key={index}
-                  style={[
-                    styles.indicator,
-                    currentSlide === index && styles.activeIndicator,
-                  ]}
-                />
-              ))}
-            </View>
-          </View>
-        )}
+              </View>
+            )}
+          </TouchableOpacity>
+        </View>
         
         {showAddForm && (
           <View style={styles.addForm}>
@@ -521,88 +475,210 @@ export default function Home({ navigation }) {
             </View>
           </View>
         )}
-        
-        <FlatList
-          data={todos}
-          keyExtractor={(item) => item.id.toString()}
-          renderItem={({ item }) => {
-            const isSelected = selectedTodos.includes(item.id);
-            return (
+      </View>
+      <View style={styles.content}>
+        {isSelectionMode ? (
+          <View style={styles.selectionContainer}>
+            <View style={styles.selectionHeader}>
+              <TouchableOpacity onPress={exitSelectionMode} style={styles.cancelSelectionButton}>
+                <Text style={styles.cancelSelectionText}>✕</Text>
+              </TouchableOpacity>
+              <Text style={styles.selectionTitle}>
+                {selectedTodos.length} selected
+              </Text>
+            </View>
+            <View style={styles.selectionActions}>
               <TouchableOpacity 
-                style={[
-                  styles.todoItem, 
-                  item.completed && styles.completedTodo,
-                  isSelected && styles.selectedTodo,
-                  isSelectionMode && styles.selectionModeTodo
-                ]}
-                onPress={() => {
-                  if (isSelectionMode) {
-                    toggleTodoSelection(item.id);
-                  } else {
-                    openTodoDetail(item);
-                  }
-                }}
-                onLongPress={() => {
-                  if (!isSelectionMode) {
-                    enterSelectionMode(item.id);
-                  }
-                }}
-                delayLongPress={500}
+                style={styles.selectAllButton} 
+                onPress={selectAllTodos}
               >
-                {isSelectionMode && (
-                  <View style={styles.selectionCheckbox}>
-                    <View style={[styles.checkbox, isSelected && styles.checkedCheckbox]}>
-                      {isSelected && <Text style={styles.checkboxText}>✓</Text>}
+                <Text style={styles.selectAllText}>
+                  {selectedTodos.length === todos.length ? 'Deselect All' : 'Select All'}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.deleteSelectedButton, selectedTodos.length === 0 && styles.disabledButton]} 
+                onPress={deleteSelectedTodos}
+                disabled={selectedTodos.length === 0}
+              >
+                <Text style={[styles.deleteSelectedText, selectedTodos.length === 0 && styles.disabledText]}>
+                  Delete
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        ) : (
+          todos.length === 0 && (
+            <View style={styles.welcomeCard}>
+              <View style={styles.slideContainer}>
+                {currentSlide === 0 && (
+                  <View style={styles.slide}>
+                    <View style={styles.slideIcon}>
+                      <Text style={styles.slideIconText}>✨</Text>
                     </View>
+                    <Text style={styles.slideTitle}>Welcome to Todo App</Text>
+                    <Text style={styles.slideSubtitle}>Organize your life with ease</Text>
                   </View>
                 )}
-                <View style={[styles.todoContent, isSelectionMode && styles.todoContentSelection]}>
-                  <View style={styles.todoHeader}>
-                    <Text style={[styles.todoText, item.completed && styles.completedText]}>
-                      {item.title}
-                    </Text>
-                    {!isSelectionMode && (
+                {currentSlide === 1 && (
+                  <View style={styles.slide}>
+                    <View style={styles.slideIcon}>
+                      <Text style={styles.slideIconText}>🎯</Text>
+                    </View>
+                    <Text style={styles.slideTitle}>Stay Productive</Text>
+                    <Text style={styles.slideSubtitle}>Track tasks & set due dates</Text>
+                  </View>
+                )}
+                {currentSlide === 2 && (
+                  <View style={styles.slide}>
+                    <View style={styles.slideIcon}>
+                      <Text style={styles.slideIconText}>⚡</Text>
+                    </View>
+                    <Text style={styles.slideTitle}>Quick Actions</Text>
+                    <Text style={styles.slideSubtitle}>Long press to select multiple</Text>
+                  </View>
+                )}
+              </View>
+              <View style={styles.slideIndicators}>
+                {[0, 1, 2].map((index) => (
+                  <View
+                    key={index}
+                    style={[
+                      styles.indicator,
+                      currentSlide === index && styles.activeIndicator,
+                    ]}
+                  />
+                ))}
+              </View>
+            </View>
+          )
+        )}
+        
+
+
+        <ScrollView style={styles.todoScrollView} showsVerticalScrollIndicator={false}>
+          {todos.length > 0 ? (
+            <>
+              {Object.entries(groupTodosByMonth(todos)).map(([monthYear, monthTodos]) => (
+                <View key={monthYear} style={styles.monthGroup}>
+                  <Text style={styles.monthHeader}>{monthYear}</Text>
+                  {monthTodos.map((item) => {
+                    const isSelected = selectedTodos.includes(item.id);
+                    return (
                       <TouchableOpacity 
-                        onPress={() => toggleTodo(item.id)}
-                        style={[styles.checkButton, item.completed && styles.checkedButton]}
+                        key={item.id}
+                        style={[
+                          styles.todoItem, 
+                          item.completed && styles.completedTodo,
+                          isSelected && styles.selectedTodo,
+                          isSelectionMode && styles.selectionModeTodo
+                        ]}
+                        onPress={() => {
+                          if (isSelectionMode) {
+                            toggleTodoSelection(item.id);
+                          } else {
+                            openTodoDetail(item);
+                          }
+                        }}
+                        onLongPress={() => {
+                          if (!isSelectionMode) {
+                            enterSelectionMode(item.id);
+                          }
+                        }}
+                        delayLongPress={500}
                       >
-                        <Text style={styles.checkText}>
-                          {item.completed ? '✓' : '○'}
-                        </Text>
+                        {isSelectionMode && (
+                          <View style={styles.selectionCheckbox}>
+                            <View style={[styles.checkbox, isSelected && styles.checkedCheckbox]}>
+                              {isSelected && <Text style={styles.checkboxText}>✓</Text>}
+                            </View>
+                          </View>
+                        )}
+                        <View style={[styles.todoContent, isSelectionMode && styles.todoContentSelection]}>
+                          <View style={styles.todoHeader}>
+                            <Text style={[styles.todoText, item.completed && styles.completedText]}>
+                              {item.title}
+                            </Text>
+                            {!isSelectionMode && (
+                              <TouchableOpacity 
+                                onPress={() => toggleTodo(item.id)}
+                                style={[styles.checkButton, item.completed && styles.checkedButton]}
+                              >
+                                <Text style={styles.checkText}>
+                                  {item.completed ? '✓' : '○'}
+                                </Text>
+                              </TouchableOpacity>
+                            )}
+                          </View>
+                          <View style={styles.todoMeta}>
+                            <Text style={styles.dateText}>
+                              Created: {formatDate(item.created_at)}
+                            </Text>
+                            {item.due_date && (
+                              <Text style={[styles.dateText, styles.dueDateText]}>
+                                Due: {formatDate(item.due_date)}
+                              </Text>
+                            )}
+                          </View>
+                        </View>
                       </TouchableOpacity>
-                    )}
-                  </View>
-                  <View style={styles.todoMeta}>
-                    <Text style={styles.dateText}>
-                      Created: {formatDate(item.created_at)}
-                    </Text>
-                    {item.due_date && (
-                      <Text style={[styles.dateText, styles.dueDateText]}>
-                        Due: {formatDate(item.due_date)}
-                      </Text>
-                    )}
-                  </View>
+                    );
+                  })}
                 </View>
-              </TouchableOpacity>
-            );
-          }}
-          contentContainerStyle={styles.list}
-        />
+              ))}
+              
+              {/* Simple card at the end */}
+              <View style={styles.endCard}>
+                <Text style={styles.endCardText}>You're all caught up! 🎉</Text>
+                <Text style={styles.endCardSubtext}>Great job staying organized</Text>
+              </View>
+            </>
+          ) : (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyStateText}>No todos yet</Text>
+              <Text style={styles.emptyStateSubtext}>Tap the + button to add your first todo</Text>
+            </View>
+          )}
+        </ScrollView>
       </View>
 
-      {/* Floating Add Button */}
+      {/* Combined Bottom Navigation Box */}
       {!isSelectionMode && (
-        <TouchableOpacity 
-          style={styles.floatingAddButton} 
-          onPress={() => {
-            if (isSelectionMode) {
-              exitSelectionMode();
-            }
-            setShowAddForm(!showAddForm);
-          }}
-        >
-          <Text style={styles.floatingAddButtonText}>+</Text>
-        </TouchableOpacity>
+        <View style={styles.combinedBottomContainer}>
+          <TouchableOpacity 
+            style={styles.combinedUpcomingButton} 
+            onPress={() => {
+              navigation.navigate('Upcoming');
+            }}
+          >
+            <Text style={styles.combinedButtonText}>Upcoming</Text>
+          </TouchableOpacity>
+          
+          <View style={styles.dividerLine} />
+          
+          <TouchableOpacity 
+            style={styles.combinedAddButton} 
+            onPress={() => {
+              if (isSelectionMode) {
+                exitSelectionMode();
+              }
+              setShowAddForm(!showAddForm);
+            }}
+          >
+            <Text style={styles.combinedAddIcon}>+</Text>
+          </TouchableOpacity>
+          
+          <View style={styles.dividerLine} />
+          
+          <TouchableOpacity 
+            style={styles.combinedStatsButton} 
+            onPress={() => {
+              navigation.navigate('Stats');
+            }}
+          >
+            <Text style={styles.combinedButtonText}>Stats</Text>
+          </TouchableOpacity>
+        </View>
       )}
 
       {/* Todo Detail Modal */}
@@ -798,17 +874,20 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f1f5f9',
   },
+  headerContainer: {
+    backgroundColor: '#2563eb',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 5,
+  },
   header: {
     backgroundColor: '#2563eb',
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
     paddingTop: 40,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 5,
   },
   menuButton: {
     padding: 8,
@@ -937,29 +1016,86 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     paddingHorizontal: 4,
   },
-  // Floating Add Button
-  floatingAddButton: {
+
+  // Combined Bottom Navigation Container - Compact Glass
+  combinedBottomContainer: {
     position: 'absolute',
-    bottom: 24,
-    right: 24,
-    backgroundColor: '#2563eb',
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    bottom: 126,
+    left: '50%',
+    transform: [{ translateX: -120 }],
+    width: 240,
+    height: 34,
+    backgroundColor: 'rgba(16, 24, 40, 0.85)',
+    borderRadius: 17,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 0.5,
+    borderColor: 'rgba(139, 92, 246, 0.4)',
+    shadowColor: 'rgba(139, 92, 246, 0.3)',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 12,
+    paddingVertical: 2,
+    paddingHorizontal: 2,
+    zIndex: 999,
+  },
+  // Combined Upcoming Button
+  combinedUpcomingButton: {
+    width: 75,
+    height: 30,
+    paddingVertical: 5,
+    paddingHorizontal: 8,
+    borderRadius: 15,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#2563eb',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
-    zIndex: 1000,
+    backgroundColor: 'transparent',
   },
-  floatingAddButtonText: {
-    color: '#ffffff',
-    fontSize: 24,
-    fontWeight: '300',
-    lineHeight: 24,
+  // Combined Add Button
+  combinedAddButton: {
+    width: 75,
+    height: 30,
+    paddingVertical: 5,
+    paddingHorizontal: 8,
+    borderRadius: 15,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(139, 92, 246, 0.2)',
+  },
+  // Combined Stats Button
+  combinedStatsButton: {
+    width: 75,
+    height: 30,
+    paddingVertical: 5,
+    paddingHorizontal: 8,
+    borderRadius: 15,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'transparent',
+  },
+  // Divider Line - Subtle
+  dividerLine: {
+    width: 0.5,
+    height: 22,
+    backgroundColor: 'rgba(139, 92, 246, 0.3)',
+    marginHorizontal: 1.5,
+  },
+  // Combined Button Text
+  combinedButtonText: {
+    color: 'rgba(255, 255, 255, 0.9)',
+    fontSize: 10,
+    fontWeight: '500',
+    textAlign: 'center',
+    letterSpacing: 0.1,
+  },
+  // Combined Add Icon
+  combinedAddIcon: {
+    color: 'rgba(255, 255, 255, 0.95)',
+    fontSize: 14,
+    fontWeight: '400',
+    textAlign: 'center',
+    lineHeight: 14,
   },
   addForm: {
     backgroundColor: '#ffffff',
@@ -1015,20 +1151,75 @@ const styles = StyleSheet.create({
   },
   list: {
     paddingBottom: 16,
-    backgroundColor: '#ffffff',
+    backgroundColor: 'transparent',
     marginTop: 8,
   },
+  todoScrollView: {
+    flex: 1,
+    paddingBottom: 80,
+  },
+
+  monthGroup: {
+    marginBottom: 24,
+  },
+  monthHeader: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#374151',
+    marginBottom: 12,
+    paddingHorizontal: 4,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
   todoItem: {
-    backgroundColor: '#ffffff',
+    backgroundColor: 'transparent',
     paddingVertical: 12,
     paddingHorizontal: 16,
-    marginBottom: 1,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f1f5f9',
+    marginBottom: 8,
+    borderRadius: 0,
     minHeight: 60,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0,0,0,0.05)',
+  },
+  endCard: {
+    backgroundColor: 'transparent',
+    padding: 20,
+    marginTop: 16,
+    marginBottom: 20,
+    alignItems: 'center',
+    borderRadius: 0,
+  },
+  endCardText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#10b981',
+    marginBottom: 4,
+    textAlign: 'center',
+  },
+  endCardSubtext: {
+    fontSize: 14,
+    color: '#6b7280',
+    textAlign: 'center',
+  },
+  emptyState: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 60,
+  },
+  emptyStateText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#6b7280',
+    marginBottom: 8,
+  },
+  emptyStateSubtext: {
+    fontSize: 14,
+    color: '#9ca3af',
+    textAlign: 'center',
   },
   completedTodo: {
-    backgroundColor: '#fafafa',
+    backgroundColor: 'transparent',
     borderLeftWidth: 3,
     borderLeftColor: '#10b981',
   },
@@ -1421,7 +1612,7 @@ const styles = StyleSheet.create({
   },
   // Selection Mode Styles
   selectedTodo: {
-    backgroundColor: '#eff6ff',
+    backgroundColor: 'rgba(37, 99, 235, 0.1)',
     borderLeftWidth: 3,
     borderLeftColor: '#2563eb',
   },

@@ -12,6 +12,8 @@ import About from './screens/About';
 import Help from './screens/Help';
 import Settings from './screens/Settings';
 import Calendar from './screens/Calendar';
+import Stats from './screens/Stats';
+import Upcoming from './screens/Upcoming';
 import Sidebar from './screens/Sidebar';
 
 const Drawer = createDrawerNavigator();
@@ -148,6 +150,8 @@ const MainDrawer = () => {
     >
       <Drawer.Screen name="Home" component={Home} />
       <Drawer.Screen name="Calendar" component={Calendar} />
+      <Drawer.Screen name="Stats" component={Stats} />
+      <Drawer.Screen name="Upcoming" component={Upcoming} />
       <Drawer.Screen name="Profile" component={Profile} />
       <Drawer.Screen name="Settings" component={Settings} />
       <Drawer.Screen name="Help" component={Help} />
